@@ -6,6 +6,7 @@ No network, no input, no dependencies.
 """
 
 import os
+from pathlib import Path
 
 TEXT = (
     "You've carried so many sentences today. Put them down here \u2014 "
@@ -17,9 +18,18 @@ TEXT = (
 
 
 def main() -> None:
-    os.makedirs("/output", exist_ok=True)
-    with open("/output/entry.txt", "w", encoding="utf-8") as f:
-        f.write(TEXT)
+    # Gate guard: the entry must stay 1-280 Unicode code points and
+    # not only whitespace, otherwise fail loudly instead of writing
+    # an invalid entry that scores 0.
+    if not 1 <= len(TEXT) <= 280 or not TEXT.strip():
+        raise ValueError(f"entry text invalid: {len(TEXT)} characters")
+    out = Path("/output/entry.txt")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(TEXT, encoding="utf-8")
+    # Verify what was actually written, not just what we intended.
+    written = out.read_text(encoding="utf-8")
+    if written != TEXT:
+        raise ValueError("written entry differs from intended text")
 
 
 if __name__ == "__main__":
